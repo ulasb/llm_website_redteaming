@@ -1,0 +1,1 @@
+Analyze the following HTML for usability and accessibility best practices (e.g., ARIA roles, contrast hints, alt text). HTML:
