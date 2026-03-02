@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Evaluator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Web Evaluator</h1>
+            <p>Analyze any web page for usability, performance, best practices, and security.</p>
+        </header>
+
+        <section class="controls">
+            <div class="input-group">
+                <label for="url">Target URL</label>
+                <input type="url" id="url" placeholder="https://example.com" required>
+            </div>
+
+            <div class="input-group">
+                <label for="model">Ollama Model</label>
+                <select id="model">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+
+            <div class="action-buttons"
+                style="display: flex; flex-direction: column; gap: 10px; justify-content: flex-end;">
+                <button id="start-btn">Start Analysis</button>
+                <button id="export-btn" disabled style="background: linear-gradient(90deg, #58a6ff, #1f6feb);">Export
+                    Results</button>
+            </div>
+        </section>
+
+        <section id="artifacts-container" class="artifacts-container" style="display: none;">
+            <h3>Loaded Artifacts <span id="artifacts-count"
+                    style="font-size: 0.9em; color: var(--text-muted);">(0)</span></h3>
+            <div class="artifacts-list" id="artifacts-list"></div>
+        </section>
+
+        <section id="scores-container" class="scores-container" style="display: none;">
+            <div class="score-badge" id="badge-usability">Usability: <span class="score-val">-</span></div>
+            <div class="score-badge" id="badge-performance">Performance: <span class="score-val">-</span></div>
+            <div class="score-badge" id="badge-code">Code: <span class="score-val">-</span></div>
+            <div class="score-badge" id="badge-security">Security: <span class="score-val">-</span></div>
+        </section>
+
+        <section class="results-grid">
+            <div class="card" id="card-usability">
+                <h2>Usability & Accessibility <span class="status-indicator"></span></h2>
+                <div class="content" id="content-usability">Ready.</div>
+            </div>
+            <div class="card" id="card-performance">
+                <h2>Page Performance <span class="status-indicator"></span></h2>
+                <div class="content" id="content-performance">Ready.</div>
+            </div>
+            <div class="card" id="card-code">
+                <h2>Code Best Practices <span class="status-indicator"></span></h2>
+                <div class="content" id="content-code">Ready.</div>
+            </div>
+            <div class="card" id="card-security">
+                <h2>Security Issues <span class="status-indicator"></span></h2>
+                <div class="content" id="content-security">Ready.</div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

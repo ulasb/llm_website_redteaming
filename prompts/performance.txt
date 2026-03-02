@@ -1,0 +1,1 @@
+Analyze the following HTML and suggest page performance improvements (e.g., render-blocking resources, script placements, image optimizations). HTML:
