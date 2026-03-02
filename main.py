@@ -73,7 +73,7 @@ def models():
 def fetch_html():
     """
     Fetches the actual HTML from the input URL.
-    To avoid context length limit issues, we truncate the code to 5000 characters.
+    To avoid context length limit issues, we truncate the code to 40000 characters.
     """
     data = request.json
     if not data:
