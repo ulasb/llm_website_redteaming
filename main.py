@@ -148,7 +148,7 @@ def evaluate():
 
     prompt_path = os.path.join(PROMPTS_DIR, prompt_file)
     try:
-        with open(prompt_path, "r") as f:
+        with open(prompt_path, "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
     except FileNotFoundError:
         return jsonify({"error": f"Prompt file {prompt_file} not found."}), 404
