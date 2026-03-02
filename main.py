@@ -111,8 +111,8 @@ def fetch_html():
                             if text:
                                 # Truncate individual artifacts to prevent blowing up the context completely
                                 artifact_contents.append(f"\n\n--- Origin: {response.url} ---\n{text[:3000]}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Could not process response for {response.url}: {e}")
             
             page.on("response", handle_response)
             
