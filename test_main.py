@@ -44,7 +44,7 @@ class TestApp(unittest.TestCase):
     def test_api_fetch_no_url(self):
         response = self.client.post("/api/fetch", json={})
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json["error"], "No JSON payload provided." if response.json.get("error") == "No JSON payload provided." else "No URL provided.")
+        self.assertEqual(response.json["error"], "No URL provided.")
 
     @patch("main.sync_playwright")
     def test_api_fetch_success(self, mock_playwright):
