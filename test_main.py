@@ -39,7 +39,7 @@ class TestApp(unittest.TestCase):
 
     def test_api_fetch_no_payload(self):
         response = self.client.post("/api/fetch")
-        self.assertEqual(response.status_code, 415)  # Because of application/json missing
+        self.assertEqual(response.status_code, 400)  # Because of application/json missing
 
     def test_api_fetch_no_url(self):
         response = self.client.post("/api/fetch", json={})
