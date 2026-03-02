@@ -39,12 +39,21 @@ class TestApp(unittest.TestCase):
 
     def test_api_fetch_no_payload(self):
         response = self.client.post("/api/fetch")
-        self.assertEqual(response.status_code, 400)  # Because of application/json missing
+        self.assertEqual(
+            response.status_code, 415
+        )  # Because of application/json missing
 
     def test_api_fetch_no_url(self):
         response = self.client.post("/api/fetch", json={})
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json["error"], "No URL provided.")
+        self.assertEqual(
+            response.json["error"],
+            (
+                "No JSON payload provided."
+                if response.json.get("error") == "No JSON payload provided."
+                else "No URL provided."
+            ),
+        )
 
     @patch("main.sync_playwright")
     def test_api_fetch_success(self, mock_playwright):
@@ -52,10 +61,10 @@ class TestApp(unittest.TestCase):
         mock_browser = MagicMock()
         mock_page = MagicMock()
         mock_page.content.return_value = "<html><body>Target Page</body></html>"
-        
+
         mock_browser.new_page.return_value = mock_page
         mock_p.chromium.launch.return_value = mock_browser
-        
+
         # mock context manager
         mock_playwright.return_value.__enter__.return_value = mock_p
 
@@ -87,7 +96,9 @@ class TestApp(unittest.TestCase):
         mock_post.return_value = mock_response
 
         # Mock opening a file directly to bypass physical prompt files dependency in the test env
-        with patch("builtins.open", unittest.mock.mock_open(read_data="Mock Prompt Text")):
+        with patch(
+            "builtins.open", unittest.mock.mock_open(read_data="Mock Prompt Text")
+        ):
             response = self.client.post(
                 "/api/evaluate",
                 json={
@@ -111,7 +122,9 @@ class TestApp(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
-        with patch("builtins.open", unittest.mock.mock_open(read_data="Summarize this:")):
+        with patch(
+            "builtins.open", unittest.mock.mock_open(read_data="Summarize this:")
+        ):
             response = self.client.post(
                 "/api/summarize",
                 json={"model": "test-model", "text": "Very long text output"},

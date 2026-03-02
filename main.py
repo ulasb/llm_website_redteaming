@@ -33,6 +33,11 @@ app = Flask(__name__)
 OLLAMA_BASE_URL = "http://localhost:11434"
 PROMPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts")
 
+# Magic string constants parsed for operations:
+ARTIFACT_CONTENT_TRUNCATION_LIMIT = 3000
+TOTAL_CONTENT_TRUNCATION_LIMIT = 40000
+PAGE_LOAD_TIMEOUT = 15000
+
 
 def get_available_models() -> Optional[List[str]]:
     """
@@ -52,6 +57,32 @@ def get_available_models() -> Optional[List[str]]:
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch models from Ollama: {e}")
         return None
+
+
+def stream_ollama_response(payload: dict, error_context: str):
+    """Refactored internal helper to securely push payload generation loops cleanly without overlapping context"""
+    try:
+        resp = requests.post(
+            f"{OLLAMA_BASE_URL}/api/generate",
+            json=payload,
+            stream=True,
+            timeout=300,
+        )
+        resp.raise_for_status()
+
+        for line in resp.iter_lines():
+            if line:
+                chunk = json.loads(line)
+                if "response" in chunk:
+                    yield chunk["response"]
+                if chunk.get("done"):
+                    break
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to generate feedback for {error_context}: {e}")
+        yield f"\n\nError connecting to Ollama: {str(e)}"
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode JSON response for {error_context}.")
+        yield "\n\nError decoding JSON from Ollama payload."
 
 
 @app.route("/")
@@ -92,14 +123,14 @@ def fetch_html():
                 headless=True,
                 args=[
                     "--disable-web-security",
-                    "--disable-features=IsolateOrigins,site-per-process"
-                ]
+                    "--disable-features=IsolateOrigins,site-per-process",
+                ],
             )
             page = browser.new_page()
-            
+
             artifacts = []
             artifact_contents = []
-            
+
             def handle_response(response):
                 try:
                     # Collect URLs of resources that load successfully
@@ -110,20 +141,29 @@ def fetch_html():
                             text = response.text()
                             if text:
                                 # Truncate individual artifacts to prevent blowing up the context completely
-                                artifact_contents.append(f"\n\n--- Origin: {response.url} ---\n{text[:3000]}")
+                                artifact_contents.append(
+                                    f"\n\n--- Origin: {response.url} ---\n{text[:ARTIFACT_CONTENT_TRUNCATION_LIMIT]}"
+                                )
                 except Exception as e:
-                    logger.warning(f"Could not process response for {response.url}: {e}")
-            
+                    logger.warning(
+                        f"Could not process response for {response.url}: {e}"
+                    )
+
             page.on("response", handle_response)
-            
+
             # Navigate using networkidle to ensure JavaScript has loaded elements
-            page.goto(url, wait_until="networkidle", timeout=15000)
+            page.goto(url, wait_until="networkidle", timeout=PAGE_LOAD_TIMEOUT)
             html_content = page.content()
             browser.close()
-            
+
             full_data = html_content + "".join(artifact_contents)
             # Increase context size dramatically now that we append external resources
-            return jsonify({"html": full_data[:40000], "artifacts": artifacts})
+            return jsonify(
+                {
+                    "html": full_data[:TOTAL_CONTENT_TRUNCATION_LIMIT],
+                    "artifacts": artifacts,
+                }
+            )
     except Exception as e:
         logger.error(f"Failed to load URL {url}: {e}")
         return jsonify({"error": str(e)}), 500
@@ -158,33 +198,12 @@ def evaluate():
     def generate():
         # Add options to drastically increase the LLM Context Window to ingest all files
         payload = {
-            "model": model, 
-            "prompt": full_prompt, 
+            "model": model,
+            "prompt": full_prompt,
             "stream": True,
-            "options": {"num_ctx": 32768}
+            "options": {"num_ctx": 32768},
         }
-        try:
-            resp = requests.post(
-                f"{OLLAMA_BASE_URL}/api/generate",
-                json=payload,
-                stream=True,
-                timeout=300,
-            )
-            resp.raise_for_status()
-
-            for line in resp.iter_lines():
-                if line:
-                    chunk = json.loads(line)
-                    if "response" in chunk:
-                        yield chunk["response"]
-                    if chunk.get("done"):
-                        break
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to generate feedback for {prompt_file}: {e}")
-            yield f"\n\nError connecting to Ollama: {str(e)}"
-        except json.JSONDecodeError:
-            logger.error(f"Failed to decode JSON response for {prompt_file}.")
-            yield "\n\nError decoding JSON from Ollama payload."
+        yield from stream_ollama_response(payload, prompt_file)
 
     return Response(stream_with_context(generate()), content_type="text/plain")
 
@@ -206,37 +225,18 @@ def summarize():
 
     prompt_path = os.path.join(PROMPTS_DIR, "summary.txt")
     try:
-        with open(prompt_path, "r") as f:
+        with open(prompt_path, "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
     except FileNotFoundError:
         return jsonify({"error": "Summary prompt not found."}), 404
 
-    full_prompt = f"{system_prompt}\n\n```text\n{text[:5000]}\n```"
+    full_prompt = (
+        f"{system_prompt}\n\n```text\n{text[:TOTAL_CONTENT_TRUNCATION_LIMIT]}\n```"
+    )
 
     def generate():
         payload = {"model": model, "prompt": full_prompt, "stream": True}
-        try:
-            resp = requests.post(
-                f"{OLLAMA_BASE_URL}/api/generate",
-                json=payload,
-                stream=True,
-                timeout=300,
-            )
-            resp.raise_for_status()
-
-            for line in resp.iter_lines():
-                if line:
-                    chunk = json.loads(line)
-                    if "response" in chunk:
-                        yield chunk["response"]
-                    if chunk.get("done"):
-                        break
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to generate summary: {e}")
-            yield f"\n\nError connecting to Ollama: {str(e)}"
-        except json.JSONDecodeError:
-            logger.error(f"Failed to decode JSON response.")
-            yield "\n\nError decoding JSON from Ollama payload."
+        yield from stream_ollama_response(payload, "summary.txt")
 
     return Response(stream_with_context(generate()), content_type="text/plain")
 

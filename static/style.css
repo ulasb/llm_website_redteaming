@@ -127,6 +127,35 @@ button:disabled {
     transform: none;
 }
 
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.export-btn {
+    background: linear-gradient(90deg, #58a6ff, #1f6feb);
+}
+
+.artifacts-count {
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.error-notification {
+    background-color: rgba(248, 81, 73, 0.15);
+    border: 1px solid #f85149;
+    color: #ff7b72;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.3s ease;
+}
+
 .artifacts-container {
     background: var(--card-bg);
     border: 1px solid var(--border);

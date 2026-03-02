@@ -1,8 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
+    let analysisResults = {}; // Removed global window.analysisResults
+
     const modelSelect = document.getElementById('model');
     const urlInput = document.getElementById('url');
     const startBtn = document.getElementById('start-btn');
     const exportBtn = document.getElementById('export-btn');
+
+    function showError(msg) {
+        let errDiv = document.getElementById('error-notification');
+        if (!errDiv) {
+            errDiv = document.createElement('div');
+            errDiv.id = 'error-notification';
+            errDiv.className = 'error-notification';
+            document.querySelector('.container').insertBefore(errDiv, document.querySelector('.controls'));
+        }
+        errDiv.textContent = msg;
+        errDiv.style.display = 'block';
+        setTimeout(() => { errDiv.style.display = 'none'; }, 5000);
+    }
 
     exportBtn.addEventListener('click', () => {
         let out = "AI Web Evaluator Results\n";
@@ -17,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         sections.forEach(s => {
-            const data = window.analysisResults && window.analysisResults[s.id];
+            const data = analysisResults[s.id];
             out += `--- ${s.title.toUpperCase()} ---\n`;
             if (data) {
                 out += `Score: ${data.score !== null ? data.score + '/10' : 'N/A'}\n\n`;
@@ -58,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modelSelect.appendChild(opt);
                 modelSelect.disabled = true;
                 startBtn.disabled = true;
-                alert("Ensure Ollama is running and has models downloaded.");
+                showError("Ensure Ollama is running and has models downloaded.");
             }
         })
         .catch(err => {
@@ -70,13 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = urlInput.value.trim();
         const model = modelSelect.value;
         if (!url || !model) {
-            alert('Please enter a valid URL and select a model.');
+            showError('Please enter a valid URL and select a model.');
             return;
         }
 
         startBtn.disabled = true;
         exportBtn.disabled = true;
-        window.analysisResults = {};
+        analysisResults = {};
 
         const sections = [
             { id: 'usability', prompt: 'usability.txt' },
@@ -174,8 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 fullText += chunk;
 
                 // Parse markdown and auto-scroll
-                if (window.marked) {
-                    evalContent.innerHTML = marked.parse(fullText);
+                if (window.marked && window.DOMPurify) {
+                    evalContent.innerHTML = DOMPurify.sanitize(marked.parse(fullText));
                 } else {
                     evalContent.textContent = fullText;
                 }
@@ -196,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="summary-content"><span style="color: var(--text-muted); font-style: italic;">Structuring table...</span></div>
                 <details class="details-section">
                     <summary>View details</summary>
-                    <div class="details-content">${marked.parse(fullText)}</div>
+                    <div class="details-content">${window.marked && window.DOMPurify ? DOMPurify.sanitize(marked.parse(fullText)) : fullText}</div>
                 </details>
             `;
             const summaryDiv = contentDiv.querySelector('.summary-content');
@@ -210,8 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const chunk = decoder.decode(value, { stream: true });
                 sumText += chunk;
 
-                if (window.marked) {
-                    summaryDiv.innerHTML = marked.parse(sumText);
+                if (window.marked && window.DOMPurify) {
+                    summaryDiv.innerHTML = DOMPurify.sanitize(marked.parse(sumText));
                 } else {
                     summaryDiv.textContent = sumText;
                 }
@@ -224,8 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (match) {
                 score = parseInt(match[1]);
                 sumText = sumText.replace(match[0], '');
-                if (window.marked) {
-                    summaryDiv.innerHTML = marked.parse(sumText.trim());
+                if (window.marked && window.DOMPurify) {
+                    summaryDiv.innerHTML = DOMPurify.sanitize(marked.parse(sumText.trim()));
                 } else {
                     summaryDiv.textContent = sumText.trim();
                 }
@@ -263,8 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 globalBadge.className = 'score-badge ' + badgeClass;
             }
 
-            window.analysisResults = window.analysisResults || {};
-            window.analysisResults[section.id] = {
+            analysisResults[section.id] = {
                 score: score,
                 summary: sumText,
                 details: fullText
