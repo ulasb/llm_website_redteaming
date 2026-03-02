@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 OLLAMA_BASE_URL = "http://localhost:11434"
-PROMPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__name__)), "prompts")
+PROMPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts")
 
 
 def get_available_models() -> Optional[List[str]]:
