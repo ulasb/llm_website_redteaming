@@ -10,8 +10,10 @@ for usability, performance, best practices, and security vulnerabilities.
 """
 
 import os
+import asyncio
 import json
 import logging
+import uuid
 from typing import List, Optional
 import requests
 from flask import (
@@ -22,7 +24,7 @@ from flask import (
     Response,
     stream_with_context,
 )
-from playwright.sync_api import sync_playwright
+from browser_use import Browser
 
 # Set up logging for development errors
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -32,11 +34,13 @@ app = Flask(__name__)
 
 OLLAMA_BASE_URL = "http://localhost:11434"
 PROMPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts")
+SCREENSHOTS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "static", "screenshots"
+)
+os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
 # Magic string constants parsed for operations:
-ARTIFACT_CONTENT_TRUNCATION_LIMIT = 3000
 TOTAL_CONTENT_TRUNCATION_LIMIT = 40000
-PAGE_LOAD_TIMEOUT = 15000
 
 
 def get_available_models() -> Optional[List[str]]:
@@ -100,11 +104,37 @@ def models():
     return jsonify({"models": models_list})
 
 
+async def fetch_page_with_agent(url: str) -> dict:
+    """
+    Uses browser-use's Browser to load a page, capture its rendered HTML,
+    and take a screenshot.
+    """
+    browser = Browser(headless=True)
+    await browser.start()
+    try:
+        await browser.navigate_to(url)
+        page = await browser.get_current_page()
+        html_content = await page.evaluate(
+            "() => document.documentElement.outerHTML"
+        )
+        screenshot_bytes = await browser.take_screenshot()
+        filename = f"{uuid.uuid4().hex}.png"
+        filepath = os.path.join(SCREENSHOTS_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(screenshot_bytes)
+        return {
+            "html": html_content[:TOTAL_CONTENT_TRUNCATION_LIMIT],
+            "screenshot": filename,
+        }
+    finally:
+        await browser.stop()
+
+
 @app.route("/api/fetch", methods=["POST"])
 def fetch_html():
     """
-    Fetches the actual HTML from the input URL.
-    To avoid context length limit issues, we truncate the code to 40000 characters.
+    Fetches the rendered HTML and a screenshot from the input URL using browser-use.
+    To avoid context length limit issues, we truncate the content to 40000 characters.
     """
     data = request.json
     if not data:
@@ -118,52 +148,8 @@ def fetch_html():
         url = "https://" + url
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    "--disable-web-security",
-                    "--disable-features=IsolateOrigins,site-per-process",
-                ],
-            )
-            page = browser.new_page()
-
-            artifacts = []
-            artifact_contents = []
-
-            def handle_response(response):
-                try:
-                    # Collect URLs of resources that load successfully
-                    if response.ok:
-                        artifacts.append(response.url)
-                        req_type = response.request.resource_type
-                        if req_type in ["script", "stylesheet"]:
-                            text = response.text()
-                            if text:
-                                # Truncate individual artifacts to prevent blowing up the context completely
-                                artifact_contents.append(
-                                    f"\n\n--- Origin: {response.url} ---\n{text[:ARTIFACT_CONTENT_TRUNCATION_LIMIT]}"
-                                )
-                except Exception as e:
-                    logger.warning(
-                        f"Could not process response for {response.url}: {e}"
-                    )
-
-            page.on("response", handle_response)
-
-            # Navigate using networkidle to ensure JavaScript has loaded elements
-            page.goto(url, wait_until="networkidle", timeout=PAGE_LOAD_TIMEOUT)
-            html_content = page.content()
-            browser.close()
-
-            full_data = html_content + "".join(artifact_contents)
-            # Increase context size dramatically now that we append external resources
-            return jsonify(
-                {
-                    "html": full_data[:TOTAL_CONTENT_TRUNCATION_LIMIT],
-                    "artifacts": artifacts,
-                }
-            )
+        result = asyncio.run(fetch_page_with_agent(url))
+        return jsonify(result)
     except Exception as e:
         logger.error(f"Failed to load URL {url}: {e}")
         return jsonify({"error": str(e)}), 500

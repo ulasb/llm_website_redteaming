@@ -6,6 +6,87 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     const exportBtn = document.getElementById('export-btn');
 
+    // Screenshot modal logic
+    const screenshotModal = document.getElementById('screenshot-modal');
+    const screenshotModalImg = document.getElementById('screenshot-modal-img');
+    const screenshotModalClose = document.getElementById('screenshot-modal-close');
+
+    document.getElementById('screenshot-img').addEventListener('click', () => {
+        screenshotModalImg.src = document.getElementById('screenshot-img').src;
+        screenshotModal.style.display = 'flex';
+    });
+
+    screenshotModalClose.addEventListener('click', () => {
+        screenshotModal.style.display = 'none';
+    });
+
+    screenshotModal.addEventListener('click', (e) => {
+        if (e.target === screenshotModal) {
+            screenshotModal.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (screenshotModal.style.display === 'flex') {
+                screenshotModal.style.display = 'none';
+            }
+            const detailModal = document.getElementById('detail-modal');
+            if (detailModal && detailModal.style.display === 'flex') {
+                detailModal.style.display = 'none';
+            }
+        }
+    });
+
+    // Detail modal logic
+    const detailModal = document.getElementById('detail-modal');
+    const detailModalClose = document.getElementById('detail-modal-close');
+    const detailModalTitle = document.getElementById('detail-modal-title');
+    const detailModalBody = document.getElementById('detail-modal-body');
+
+    detailModalClose.addEventListener('click', () => {
+        detailModal.style.display = 'none';
+    });
+
+    detailModal.addEventListener('click', (e) => {
+        if (e.target === detailModal) {
+            detailModal.style.display = 'none';
+        }
+    });
+
+    function showDetailModal(category, description, fullText) {
+        detailModalTitle.textContent = category;
+
+        // Search fullText for a section that matches this category
+        const escaped = category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp('(?:^|\\n)(#{1,4}\\s*.*?' + escaped + '.*?)(?=\\n#{1,4}\\s|$)', 'is');
+        const match = fullText.match(pattern);
+
+        let body = '';
+        if (match) {
+            // Extract from the matched heading to the next heading of same or higher level
+            const headingMatch = match[1].match(/^(#{1,4})\s/);
+            const level = headingMatch ? headingMatch[1].length : 3;
+            const startIdx = fullText.indexOf(match[1]);
+            const rest = fullText.substring(startIdx + match[1].length);
+            const nextHeading = rest.search(new RegExp('\\n#{1,' + level + '}\\s'));
+            const section = nextHeading >= 0
+                ? match[1] + rest.substring(0, nextHeading)
+                : match[1] + rest;
+            body = section.trim();
+        } else {
+            body = '**' + category + '**\n\n' + description;
+        }
+
+        if (window.marked && window.DOMPurify) {
+            detailModalBody.innerHTML = DOMPurify.sanitize(marked.parse(body));
+        } else {
+            detailModalBody.textContent = body;
+        }
+
+        detailModal.style.display = 'flex';
+    }
+
     function showError(msg) {
         let errDiv = document.getElementById('error-notification');
         if (!errDiv) {
@@ -108,8 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
             content.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Loading data...</span>';
         });
 
-        document.getElementById('artifacts-container').style.display = 'none';
-        document.getElementById('artifacts-list').innerHTML = '';
+        document.getElementById('screenshot-container').style.display = 'none';
+        document.getElementById('screenshot-img').src = '';
         document.getElementById('scores-container').style.display = 'none';
 
         startBtn.textContent = 'Fetching Page...';
@@ -127,22 +208,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.error) throw new Error(data.error);
 
             const htmlContent = data.html;
-            const artifacts = data.artifacts || [];
 
-            // Populate artifacts UI
-            const artifactsContainer = document.getElementById('artifacts-container');
-            const artifactsList = document.getElementById('artifacts-list');
-            const artifactsCount = document.getElementById('artifacts-count');
-
-            if (artifacts.length > 0) {
-                artifactsContainer.style.display = 'block';
-                artifactsCount.textContent = `(${artifacts.length})`;
-                artifacts.forEach(artifact => {
-                    const div = document.createElement('div');
-                    div.title = artifact;
-                    div.textContent = artifact;
-                    artifactsList.appendChild(div);
-                });
+            // Show screenshot if available
+            if (data.screenshot) {
+                const screenshotContainer = document.getElementById('screenshot-container');
+                const screenshotImg = document.getElementById('screenshot-img');
+                screenshotImg.src = `/static/screenshots/${data.screenshot}`;
+                screenshotContainer.style.display = 'block';
             }
 
             startBtn.textContent = 'Analyzing...';
@@ -246,15 +318,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const rows = summaryDiv.querySelectorAll('tr');
+            const rows = Array.from(summaryDiv.querySelectorAll('tr'));
+            const severityOrder = { red: 0, yellow: 1, green: 2 };
+
+            // Color rows and sort by severity
+            const dataRows = [];
+            let headerRow = null;
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length > 0) {
                     const text = cells[cells.length - 1].textContent.trim().toLowerCase();
-                    if (text === 'red') row.className = 'row-red';
-                    else if (text === 'yellow') row.className = 'row-yellow';
-                    else if (text === 'green') row.className = 'row-green';
+                    if (text === 'red') row.className = 'row-red row-clickable';
+                    else if (text === 'yellow') row.className = 'row-yellow row-clickable';
+                    else if (text === 'green') row.className = 'row-green row-clickable';
+                    else row.className = 'row-clickable';
+                    dataRows.push({ row, severity: severityOrder[text] ?? 3 });
+                } else {
+                    headerRow = row;
                 }
+            });
+
+            dataRows.sort((a, b) => a.severity - b.severity);
+
+            const tbody = summaryDiv.querySelector('tbody') || summaryDiv.querySelector('table');
+            if (tbody) {
+                if (headerRow) tbody.appendChild(headerRow);
+                dataRows.forEach(({ row }) => tbody.appendChild(row));
+            }
+
+            // Add click handlers to open detail modal
+            dataRows.forEach(({ row }) => {
+                row.addEventListener('click', () => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length < 2) return;
+                    const category = cells[0].textContent.trim();
+                    const description = cells[1].textContent.trim();
+                    showDetailModal(category, description, fullText);
+                });
             });
 
             if (score !== null) {
