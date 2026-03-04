@@ -36,9 +36,9 @@
             </div>
         </section>
 
-        <section id="artifacts-container" class="artifacts-container" style="display: none;">
-            <h3>Loaded Artifacts <span id="artifacts-count" class="artifacts-count">(0)</span></h3>
-            <div class="artifacts-list" id="artifacts-list"></div>
+        <section id="screenshot-container" class="screenshot-container" style="display: none;">
+            <h3>Page Preview</h3>
+            <img id="screenshot-img" class="screenshot-thumbnail" alt="Page screenshot" />
         </section>
 
         <section id="scores-container" class="scores-container" style="display: none;">
@@ -73,6 +73,17 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"
         integrity="sha384-zbcZAIxlvJtNE3Dp5nxLXdXtXyxwOdnILY1TDPVmKFhl4r4nSUG1r8bcFXGVa4Te"
         crossorigin="anonymous"></script>
+    <div id="detail-modal" class="detail-modal" style="display: none;">
+        <div class="detail-modal-content">
+            <span id="detail-modal-close" class="detail-modal-close">&times;</span>
+            <h2 id="detail-modal-title"></h2>
+            <div id="detail-modal-body" class="detail-modal-body"></div>
+        </div>
+    </div>
+    <div id="screenshot-modal" class="screenshot-modal" style="display: none;">
+        <span id="screenshot-modal-close" class="screenshot-modal-close">&times;</span>
+        <img id="screenshot-modal-img" class="screenshot-modal-img" alt="Page screenshot full size" />
+    </div>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 

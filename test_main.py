@@ -55,28 +55,21 @@ class TestApp(unittest.TestCase):
             ),
         )
 
-    @patch("main.sync_playwright")
-    def test_api_fetch_success(self, mock_playwright):
-        mock_p = MagicMock()
-        mock_browser = MagicMock()
-        mock_page = MagicMock()
-        mock_page.content.return_value = "<html><body>Target Page</body></html>"
+    @patch("main.fetch_page_with_agent")
+    def test_api_fetch_success(self, mock_fetch_agent):
+        async def mock_result(url):
+            return {
+                "html": "<html><body>Target Page</body></html>",
+                "screenshot": "test123.png",
+            }
 
-        mock_browser.new_page.return_value = mock_page
-        mock_p.chromium.launch.return_value = mock_browser
-
-        # mock context manager
-        mock_playwright.return_value.__enter__.return_value = mock_p
+        mock_fetch_agent.side_effect = mock_result
 
         response = self.client.post("/api/fetch", json={"url": "example.com"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Target Page", response.json["html"])
-        self.assertIn("artifacts", response.json)
-        mock_page.goto.assert_called_with(
-            "https://example.com",
-            wait_until="networkidle",
-            timeout=15000,
-        )
+        self.assertIn("screenshot", response.json)
+        mock_fetch_agent.assert_called_once_with("https://example.com")
 
     def test_api_evaluate_missing_payload(self):
         response = self.client.post("/api/evaluate", json={"model": "dummy"})

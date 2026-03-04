@@ -156,7 +156,7 @@ button:disabled {
     animation: fadeIn 0.3s ease;
 }
 
-.artifacts-container {
+.screenshot-container {
     background: var(--card-bg);
     border: 1px solid var(--border);
     padding: 1.2rem;
@@ -166,7 +166,7 @@ button:disabled {
     animation: fadeIn 0.5s ease;
 }
 
-.artifacts-container h3 {
+.screenshot-container h3 {
     margin-top: 0;
     margin-bottom: 0.8rem;
     font-size: 1.1rem;
@@ -175,28 +175,18 @@ button:disabled {
     padding-bottom: 0.5rem;
 }
 
-.artifacts-list {
-    max-height: 120px;
-    overflow-y: auto;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 0.8rem;
-    color: var(--text-muted);
+.screenshot-thumbnail {
+    max-width: 400px;
+    max-height: 300px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+    cursor: pointer;
 }
 
-.artifacts-list div {
-    padding: 0.2rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.artifacts-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.artifacts-list::-webkit-scrollbar-thumb {
-    background: #4b535d;
-    border-radius: 3px;
+.screenshot-thumbnail:hover {
+    transform: scale(1.05);
 }
 
 .results-grid {
@@ -531,4 +521,155 @@ button:disabled {
 .score-badge .score-val {
     font-size: 1.3rem;
     font-weight: 800;
+}
+
+.screenshot-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+    cursor: pointer;
+}
+
+.screenshot-modal-close {
+    position: fixed;
+    top: 1.5rem;
+    right: 2rem;
+    font-size: 2.5rem;
+    color: #c9d1d9;
+    cursor: pointer;
+    z-index: 1001;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.screenshot-modal-close:hover {
+    color: #fff;
+}
+
+.screenshot-modal-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    cursor: default;
+}
+
+.row-clickable {
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.row-clickable:hover {
+    filter: brightness(1.3);
+}
+
+.detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+    cursor: pointer;
+}
+
+.detail-modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 700px;
+    max-height: 80vh;
+    width: 90vw;
+    overflow-y: auto;
+    position: relative;
+    cursor: default;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    line-height: 1.7;
+    color: var(--text-color);
+}
+
+.detail-modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    color: #e6edf3;
+    padding-right: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+}
+
+.detail-modal-body {
+    font-size: 0.95rem;
+}
+
+.detail-modal-body h1,
+.detail-modal-body h2,
+.detail-modal-body h3,
+.detail-modal-body h4 {
+    color: #e6edf3;
+    margin-top: 1.2rem;
+    margin-bottom: 0.6rem;
+}
+
+.detail-modal-body pre {
+    background: #0d1117;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+}
+
+.detail-modal-body code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    background: rgba(110, 118, 129, 0.2);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #e6edf3;
+}
+
+.detail-modal-body ul,
+.detail-modal-body ol {
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+.detail-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    font-size: 2rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.detail-modal-close:hover {
+    color: #fff;
+}
+
+.detail-modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.detail-modal-content::-webkit-scrollbar-thumb {
+    background: #4b535d;
+    border-radius: 3px;
 }
